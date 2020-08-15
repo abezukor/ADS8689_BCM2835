@@ -13,6 +13,7 @@
 #include <time.h>
 #include <iostream>
 #include <stdexcept>
+#include <limits>
 
 //addresses for register bits
 //format: reg_name_MSB_LSB
@@ -71,13 +72,20 @@ class ADS8689
 
 		const float internalReference = 4.096;
 
+		ADS8689(SPI, Range range, Reference reference=Internal, uint8_t cs=0);
+		ADS8689(SPI, Range range, double referenceVoltage, Reference reference=External, uint8_t cs=0);
+
 		uint16_t sendCommand(uint8_t op, uint8_t address, uint16_t data);
-		void begin(SPI spiModule=SPI_AUX, uint8_t cs=0, Range range=pm3Vref, Reference reference = External);
-		uint16_t readADC();
+		uint16_t readPlainADC();
+		double readADC();
 		
 	private:
 		uint8_t spiModule;
 		uint8_t cs;
+		Reference reference;
+		Range range;
+		bool setRange=false;
+		double referenceVoltage;
 
 };
 
