@@ -11,6 +11,8 @@
 #include <bcm2835.h>
 #include <stdio.h>
 #include <time.h>
+#include <iostream>
+#include <stdexcept>
 
 //addresses for register bits
 //format: reg_name_MSB_LSB
@@ -44,19 +46,39 @@
 #define WRITE_LSBYTE  0xD4 //write 8 bits to register (LS Byte of data)
 #define SET_HWORD     0xD8 //any bits marked 1 in data will be set to 1 in register at those positions
 
-#define SPI_0                 0
-#define SPI_AUX               1 //aka SPI1 
-
 class ADS8689
 {
-  public:
-    uint16_t sendCommand(uint8_t op, uint8_t address, uint16_t data);
-    bool begin(uint8_t spiModule=SPI_AUX, uint8_t cs=0);
-    uint16_t readADC();
-    
-  private:
-    uint8_t spiModule;
-    uint8_t cs;
+	public:
+		enum Range{
+			pm3Vref = 0x0000,
+			pm25Vref = 0x0001,
+			pm15Vref = 0x0002,
+			pm125Vref = 0x0003,
+			pm0625Vref = 0x0004,
+			p3Vref = 0x0008,
+			p25Vref = 0x0009,
+			p15Vref = 0x000A,
+			p125Vref = 0x000B
+		};
+		enum Reference{
+			External = 0x0080,
+			Internal = 0x0000,
+		};
+		enum SPI{
+			SPI_0 = 0,
+			SPI_AUX = 1
+		};
+
+		const float internalReference = 4.096;
+
+		uint16_t sendCommand(uint8_t op, uint8_t address, uint16_t data);
+		void begin(SPI spiModule=SPI_AUX, uint8_t cs=0, Range range=pm3Vref, Reference reference = External);
+		uint16_t readADC();
+		
+	private:
+		uint8_t spiModule;
+		uint8_t cs;
+
 };
 
 
