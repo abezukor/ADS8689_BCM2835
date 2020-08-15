@@ -3,10 +3,12 @@
  * with a Raspberry Pi usign BCM2835 library           *
  *                                                     *
  * Author: Marco Duarte                                *
+ * Improvments: Abe Zukor							   *
  \----------------------------------------------------*/
  
 #include "ADS8689_BCM2835.hpp"
 
+//main constructor
 ADS8689::ADS8689(SPI spiModule, ChipSelect cs, Range range, Reference reference)
 {
 	//Setting classwide varibles
@@ -45,43 +47,42 @@ ADS8689::ADS8689(SPI spiModule, ChipSelect cs, Range range, Reference reference)
 		throw std::runtime_error("bcm2835_spi_begin failed. Are you running as root??\n");
 	}
 
+	//wait a bit for initialazation to finish
 	struct timespec delay;
 	delay.tv_sec = 1;
 	delay.tv_nsec = 10005;
-	
 	nanosleep(&delay, NULL);
-	
 	delay.tv_sec = 0;
 	
-	if(this->spiModule == SPI_AUX)
-	{
-		uint16_t clockDivider = bcm2835_aux_spi_CalcClockDivider(3125000);
-		bcm2835_aux_spi_setClockDivider(clockDivider);
-	}
-	else if(this->spiModule == SPI_0)
-	{
-		if(this->cs != BCM2835_SPI_CS0 && this->cs != BCM2835_SPI_CS1)
+	//set SPI Settings
+	switch(this->spiModule){
+		case SPI_AUX: 
 		{
-			throw std::runtime_error("Choose BCM2835_SPI_CS0 or BCM2835_SPI_CS1\n");
+			uint16_t clockDivider = bcm2835_aux_spi_CalcClockDivider(3125000);
+			bcm2835_aux_spi_setClockDivider(clockDivider);
+			break;
 		}
-		
-		bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST);
-		bcm2835_spi_setDataMode(BCM2835_SPI_MODE0);
-		bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_128);
-		bcm2835_spi_chipSelect(this->cs);
-		bcm2835_spi_setChipSelectPolarity(this->cs, LOW);
-	}
-	else
-	{
-		throw std::runtime_error("Choose SPI_AUX or SPI_0\n");
+		case SPI_0:
+		{
+			if(this->cs != BCM2835_SPI_CS0 && this->cs != BCM2835_SPI_CS1)
+			{
+				throw std::runtime_error("Choose BCM2835_SPI_CS0 or BCM2835_SPI_CS1\n");
+			}
+			bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST);
+			bcm2835_spi_setDataMode(BCM2835_SPI_MODE0);
+			bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_128);
+			bcm2835_spi_chipSelect(this->cs);
+			bcm2835_spi_setChipSelectPolarity(this->cs, LOW);
+			break;
+		}
+		default:
+			throw std::runtime_error("Choose SPI_AUX or SPI_0\n");
+			break;
 	}
 	
-	//set adc to use internal VREF and range to 1.25*VREF
-
+	//set the ADS to the requested interval
 	uint16_t got = 0;
-	
-	uint64_t command = range | reference;
-
+	uint32_t command = range | reference;
 	do
 	{
 		sendCommand(WRITE, RANGE_SEL_REG_7_0, command);
@@ -93,9 +94,9 @@ ADS8689::ADS8689(SPI spiModule, ChipSelect cs, Range range, Reference reference)
 	}while(got != command);
 	
 	sendCommand(NOP, 0x00, 0x0000);
-	
 	return;
 }
+//Alternate constructor for external reference. Uses Constructor delagation.
 ADS8689::ADS8689(SPI spiModule, ChipSelect cs, Range range, double referenceVoltage, Reference reference) : 
 	ADS8689::ADS8689(spiModule, cs, range, reference)
 {
@@ -103,6 +104,7 @@ ADS8689::ADS8689(SPI spiModule, ChipSelect cs, Range range, double referenceVolt
 	this->setRange = true;
 }
 
+//Send a command
 uint16_t ADS8689::sendCommand(uint8_t op, uint8_t address, uint16_t data)
 {
 	char buff[4] = {0};
@@ -132,6 +134,7 @@ uint16_t ADS8689::readPlainADC()
 	return sendCommand(NOP, 0x00, 0x0000);
 }
 
+//Uses read planeadc but also does scaling math
 double ADS8689::readADC(){
 
 	double val = (double) readPlainADC();
@@ -139,7 +142,7 @@ double ADS8689::readADC(){
 
 	double scalefactor = 0.0;
 
-	//set range 
+	//Find the scalefactor from the range
 	switch(this->range)
 	{
 		case pm3Vref: case p3Vref:
@@ -160,8 +163,8 @@ double ADS8689::readADC(){
 		default:
 			throw std::runtime_error("Invalid Range \n");
 	}
-	//printf("%lf %lf %lf %d \n", val, scalefactor, scalefactor/2, this->reference);
-	//unipolar or bipolar
+
+	//Check if unipolar or bi-polar. If bipolar, double range and shift down by half the max value so its centered at zero
 	switch(this->reference)
 	{
 		case pm3Vref: case pm25Vref: case pm15Vref: case pm125Vref: case pm0625Vref:
@@ -174,5 +177,7 @@ double ADS8689::readADC(){
 		default:
 			throw std::runtime_error("Invalid Range \n");
 	}
+
+	//Calculate and refturn the scaled value.
 	return val*scalefactor;
 }

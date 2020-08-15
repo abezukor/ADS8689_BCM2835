@@ -50,11 +50,13 @@
 class ADS8689
 {
 	public:
+		//SPI Options
 		enum SPI{
 			SPI_0 = 0,
 			SPI_AUX = 1
 		};
 
+		//Chip Select Options
 		enum ChipSelect {
 			CS0 = BCM2835_SPI_CS0,
 			CS1 = BCM2835_SPI_CS1,
@@ -62,34 +64,39 @@ class ADS8689
 			CSManual = BCM2835_SPI_CS_NONE 
 		};
 
+		//Reference Options
 		enum Reference{
 			External = 0x0080,
 			Internal = 0x0000,
 		};
 
+		//Range Options (pm is ±, p is unipolar)
 		enum Range{
-			pm3Vref = 0x0000,
-			pm25Vref = 0x0001,
-			pm15Vref = 0x0002,
-			pm125Vref = 0x0003,
-			pm0625Vref = 0x0004,
-			p3Vref = 0x0008,
-			p25Vref = 0x0009,
-			p15Vref = 0x000A,
-			p125Vref = 0x000B
+			pm3Vref = 0x0000, //±3*Vref
+			pm25Vref = 0x0001, //±2.5*Vref
+			pm15Vref = 0x0002, //±2.5*Vref
+			pm125Vref = 0x0003, //±1.25*Vref
+			pm0625Vref = 0x0004, //±0.625*Vref
+			p3Vref = 0x0008, //3*Vref
+			p25Vref = 0x0009, //2.5*Vref
+			p15Vref = 0x000A, //1.5*Vref
+			p125Vref = 0x000B //1.25*Vref
 		};
 
+		//Internal reference value. May be useful for data processing so its public
 		const float internalReference = 4.096;
 
-		ADS8689(SPI, ChipSelect cs, Range range, Reference reference=Internal);
-		ADS8689(SPI, ChipSelect cs, Range range, double referenceVoltage, Reference reference=External);
+		//Constructors
+		ADS8689(SPI, ChipSelect cs, Range range, Reference reference=Internal); //Internal Reference
+		ADS8689(SPI, ChipSelect cs, Range range, double referenceVoltage, Reference reference=External); //External Reference
 
-		uint16_t sendCommand(uint8_t op, uint8_t address, uint16_t data);
-		uint16_t readPlainADC();
-		double readADC();
+		uint16_t sendCommand(uint8_t op, uint8_t address, uint16_t data); //Send a Generic Command
+		uint16_t readPlainADC(); //Read plane value from ADC
+		double readADC(); //Read Scaled value from the ADC
 		
 	private:
-		uint8_t spiModule;
+		//local stored varibles.
+		uint8_t spiModule; 
 		uint8_t cs;
 		Reference reference;
 		Range range;

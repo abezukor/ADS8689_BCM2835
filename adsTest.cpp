@@ -8,16 +8,16 @@
 
 int main()
 {
-	
+	//Initialize a delay
 	struct timespec delay;
-	
+	//Set delay times
 	delay.tv_sec = 0;
 	delay.tv_nsec = 10000;
 	
-	//using SPI0 and CS0, comment arguments for SPI1 and CS2
+	//Initialize the ADC using SPI0, CS0, ±0.625*Vref range and an internal Reference.
 	ADS8689 adc(ADS8689::SPI::SPI_0, ADS8689::ChipSelect::CS0, ADS8689::Range::pm0625Vref, ADS8689::Reference::Internal);
 	
-	//double scaler = (4.096 * 0.625)/(std::numeric_limits<int>::max()/2);
+	//store min and max
 	double min = std::numeric_limits<double>::max();
 	double max = std::numeric_limits<double>::min();
 
@@ -25,15 +25,19 @@ int main()
 	{
 		//read adc
 		double scaledval = adc.readADC();
-		//printf("Voltage = %lf \n", scaledval);
+
+		
 		if(scaledval>max){
 			max = scaledval;
-			std::cout << "min: " << min << " max: " << max << " v: " << adc.readPlainADC() << std::endl;
 		}
 		if(scaledval<min){
 			min = scaledval;
-			std::cout << "min: " << min << " max: " << max << " v: " << adc.readPlainADC() << std::endl;
-		}	
-			nanosleep(&delay, NULL); 
+		}
+
+		//print the scaled value and the max and min received voltages
+		std::cout << "value: " << scaledval  << " received min: " << min << " received max: " << max << std::endl;
+		
+		//sleep for a bit
+		nanosleep(&delay, NULL); 
 	}
 }
