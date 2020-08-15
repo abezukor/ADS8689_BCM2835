@@ -50,6 +50,23 @@
 class ADS8689
 {
 	public:
+		enum SPI{
+			SPI_0 = 0,
+			SPI_AUX = 1
+		};
+
+		enum ChipSelect {
+			CS0 = BCM2835_SPI_CS0,
+			CS1 = BCM2835_SPI_CS1,
+			CS2 = BCM2835_SPI_CS2,
+			CSManual = BCM2835_SPI_CS_NONE 
+		};
+
+		enum Reference{
+			External = 0x0080,
+			Internal = 0x0000,
+		};
+
 		enum Range{
 			pm3Vref = 0x0000,
 			pm25Vref = 0x0001,
@@ -61,19 +78,11 @@ class ADS8689
 			p15Vref = 0x000A,
 			p125Vref = 0x000B
 		};
-		enum Reference{
-			External = 0x0080,
-			Internal = 0x0000,
-		};
-		enum SPI{
-			SPI_0 = 0,
-			SPI_AUX = 1
-		};
 
 		const float internalReference = 4.096;
 
-		ADS8689(SPI, Range range, Reference reference=Internal, uint8_t cs=0);
-		ADS8689(SPI, Range range, double referenceVoltage, Reference reference=External, uint8_t cs=0);
+		ADS8689(SPI, ChipSelect cs, Range range, Reference reference=Internal);
+		ADS8689(SPI, ChipSelect cs, Range range, double referenceVoltage, Reference reference=External);
 
 		uint16_t sendCommand(uint8_t op, uint8_t address, uint16_t data);
 		uint16_t readPlainADC();

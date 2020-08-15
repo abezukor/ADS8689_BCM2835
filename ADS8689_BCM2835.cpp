@@ -7,8 +7,9 @@
  
 #include "ADS8689_BCM2835.hpp"
 
-ADS8689::ADS8689(SPI spiModule, Range range, Reference reference, uint8_t cs)
+ADS8689::ADS8689(SPI spiModule, ChipSelect cs, Range range, Reference reference)
 {
+	//Setting classwide varibles
 	this->cs = cs;
 	this->spiModule = spiModule;
 	this->range = range;
@@ -21,6 +22,29 @@ ADS8689::ADS8689(SPI spiModule, Range range, Reference reference, uint8_t cs)
 		throw std::runtime_error("No Reference Voltage set.\n");
 	}
 	
+	//initializeing SPI
+	//Initializes BCM library
+	if (!bcm2835_init())
+	{
+		throw std::runtime_error("bcm2835_init failed. Are you running as root??\n");
+	}
+	//change tp bcm2835_aux_spi_begin() if using SPI1
+	bool spi_begin = false;
+	switch(this->spiModule){
+		case SPI_0:
+			spi_begin = bcm2835_spi_begin();
+			break;
+		case SPI_AUX:
+			spi_begin = bcm2835_aux_spi_begin();
+			break;
+		default:
+			break;
+	}
+	if (!spi_begin)
+	{
+		throw std::runtime_error("bcm2835_spi_begin failed. Are you running as root??\n");
+	}
+
 	struct timespec delay;
 	delay.tv_sec = 1;
 	delay.tv_nsec = 10005;
@@ -72,8 +96,8 @@ ADS8689::ADS8689(SPI spiModule, Range range, Reference reference, uint8_t cs)
 	
 	return;
 }
-ADS8689::ADS8689(SPI spiModule, Range range, double referenceVoltage, Reference reference, uint8_t cs) : 
-	ADS8689::ADS8689(spiModule, range, reference, cs)
+ADS8689::ADS8689(SPI spiModule, ChipSelect cs, Range range, double referenceVoltage, Reference reference) : 
+	ADS8689::ADS8689(spiModule, cs, range, reference)
 {
 	this->referenceVoltage = referenceVoltage;
 	this->setRange = true;
@@ -116,7 +140,8 @@ double ADS8689::readADC(){
 	double scalefactor = 0.0;
 
 	//set range 
-	switch(this->range){
+	switch(this->range)
+	{
 		case pm3Vref: case p3Vref:
 			scalefactor = this->referenceVoltage*3/std::numeric_limits<uint16_t>::max();
 			break;
@@ -137,7 +162,8 @@ double ADS8689::readADC(){
 	}
 	//printf("%lf %lf %lf %d \n", val, scalefactor, scalefactor/2, this->reference);
 	//unipolar or bipolar
-	switch(this->reference){
+	switch(this->reference)
+	{
 		case pm3Vref: case pm25Vref: case pm15Vref: case pm125Vref: case pm0625Vref:
 			val = val-0.5*std::numeric_limits<uint16_t>::max();
 			scalefactor *= 2;
